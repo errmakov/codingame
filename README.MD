@@ -8,7 +8,7 @@ _Algos: BFS_
 
 That's the simulation of the original puzzle. The goal is to find the Control room and then return to the start point using the shortiest path.
 
-You can draw your own maze shape using imagination or asking ChatGPT
+You can draw your own maze shape using imagination or asking ChatGPT.
 
 Look at _ingameide.txt_ for the solution you can copy-past into the game's IDE.
 
