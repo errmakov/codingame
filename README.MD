@@ -1,4 +1,4 @@
-Some of my solvings of the problems from codingame.com
+Some of my solvings of problems from codingame.com
 
 # Typescript
 
