@@ -1,4 +1,4 @@
-Some of my solvings of problems from [codingame.com](https://codingame.com). Follow me [https://www.codingame.com/profile/5f5dc7b50704a2cc19770035bdb04f0b7370875](@errmakov) and let's have some hot clashes.
+Some of my solvings of problems from [codingame.com](https://codingame.com). Follow me ([@errmakov](https://www.codingame.com/profile/5f5dc7b50704a2cc19770035bdb04f0b7370875) and let's have some hot clashes.
 
 # Typescript
 
