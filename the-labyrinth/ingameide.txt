@@ -1,0 +1,217 @@
+var inputs: string[] = readline().split(" ");
+const R: number = parseInt(inputs[0]); // number of rows.
+const C: number = parseInt(inputs[1]); // number of columns.
+const A: number = parseInt(inputs[2]); // number of rounds between the time the alarm countdown is activated and the time the alarm goes off.
+
+type TGraph = { [node: string]: string[] };
+let graph: TGraph = {};
+type TCoord = [number, number];
+const validNodes = ["T", "C", "."];
+let visited: string[] = [];
+let flagReached = false;
+let moveMode = "goExplore";
+let iP: TCoord = [-1, -1];
+let rc: TCoord = [-1, -1];
+const RADAR = 2;
+
+// game loop
+let initR;
+let initC;
+const valid = [".", "C", "T"];
+const consoleCut = (prompt: string, obj: any): void => {
+  if (obj.length > 10) {
+    console.error(`${prompt}10...`, obj.slice(Math.round(obj.length / 2)));
+  } else {
+    console.error(prompt, obj);
+  }
+};
+
+const getDirection = (a: TCoord, b: TCoord): string => {
+  //get direction from a to b
+  if (a[0] > b[0]) return "UP";
+  if (a[0] < b[0]) return "DOWN";
+  if (a[1] > b[1]) return "LEFT";
+  if (a[1] < b[1]) return "RIGHT";
+  return "";
+};
+
+const bfs = (
+  graph: TGraph,
+  source: string,
+  target: string
+): { distance: number; path: string[] } => {
+  const queue: string[] = [source];
+  const distances: { [node: string]: number } = { [source]: 0 };
+  const parents: { [node: string]: string | undefined } = {
+    [source]: undefined,
+  };
+
+  while (queue.length > 0) {
+    const currentNode: string = queue.shift() as string;
+    for (const neighbor of graph[currentNode]) {
+      if (distances[neighbor] === undefined) {
+        distances[neighbor] = distances[currentNode] + 1;
+        parents[neighbor] = currentNode;
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  if (distances[target] !== undefined) {
+    const path: string[] = [target];
+    let current = target;
+    while (parents[current] !== undefined) {
+      path.unshift(parents[current] as string);
+      current = parents[current] as string;
+    }
+    return { distance: distances[target], path };
+  }
+  return { distance: -1, path: [] };
+};
+
+const getUnvisited = (
+  graph: TGraph,
+  visited: string[],
+  rc: TCoord,
+  unlinked: string[]
+): TCoord => {
+  let res: TCoord = [-1, -1];
+  Object.keys(graph).forEach((node) => {
+    if (
+      !visited.includes(node) &&
+      node !== `${rc[0]},${rc[1]}` &&
+      !unlinked.includes(node)
+    ) {
+      const c = node.split(",").map((n) => parseInt(n));
+      res = [c[0], c[1]];
+    }
+  });
+  if (res[0] === -1 && res[1] === -1)
+    return getUnvisited(graph, visited, res, unlinked);
+  return res;
+};
+
+const inMaze = (p: TCoord, maze: string[]): boolean =>
+  p[0] >= 0 && p[0] < maze.length && p[1] >= 0 && p[1] < maze[0].length;
+
+const updateGraph = (
+  graph: TGraph,
+  p: TCoord,
+  maze: string[],
+  r: number
+): TGraph => {
+  let newGraph = { ...graph };
+
+  for (let i = -r; i <= r; i++) {
+    for (let j = -r; j <= r; j++) {
+      let y = p[0] + i;
+      let x = p[1] + j;
+      if (!inMaze([y, x], maze)) continue;
+      if (!validNodes.includes(maze[y][x])) continue;
+      const cnode = `${y},${x}`;
+      if (!newGraph[`${y},${x}`]) newGraph[`${y},${x}`] = [];
+      if (inMaze([y + 1, x], maze) && validNodes.includes(maze[y + 1][x])) {
+        const nnode = `${y + 1},${x}`;
+        if (!newGraph[`${y + 1},${x}`]) newGraph[`${y + 1},${x}`] = [];
+        if (!newGraph[cnode].includes(nnode)) newGraph[cnode].push(nnode);
+        if (!newGraph[nnode].includes(cnode)) newGraph[nnode].push(cnode);
+      }
+      if (inMaze([y - 1, x], maze) && validNodes.includes(maze[y - 1][x])) {
+        const nnode = `${y - 1},${x}`;
+        if (!newGraph[`${y - 1},${x}`]) newGraph[`${y - 1},${x}`] = [];
+        if (!newGraph[cnode].includes(nnode)) newGraph[cnode].push(nnode);
+        if (!newGraph[nnode].includes(cnode)) newGraph[nnode].push(cnode);
+      }
+      if (inMaze([y, x + 1], maze) && validNodes.includes(maze[y][x + 1])) {
+        const nnode = `${y},${x + 1}`;
+        if (!newGraph[`${y},${x + 1}`]) newGraph[`${y},${x + 1}`] = [];
+        if (!newGraph[cnode].includes(nnode)) newGraph[cnode].push(nnode);
+        if (!newGraph[nnode].includes(cnode)) newGraph[nnode].push(cnode);
+      }
+      if (inMaze([y, x - 1], maze) && validNodes.includes(maze[y][x - 1])) {
+        const nnode = `${y},${x - 1}`;
+        if (!newGraph[`${y},${x - 1}`]) newGraph[`${y},${x - 1}`] = [];
+        if (!newGraph[cnode].includes(nnode)) newGraph[cnode].push(nnode);
+        if (!newGraph[nnode].includes(cnode)) newGraph[nnode].push(cnode);
+      }
+    }
+  }
+  return newGraph;
+};
+
+const uncoveredRate = (maze: string[], totalCover: number): number => {
+  let covered = 0;
+
+  for (let i = 0; i < maze.length; i++) {
+    for (let j = 0; j < maze[i].length; j++) {
+      if (maze[i][j] === "?") covered++;
+    }
+  }
+  return Math.floor((100 * (totalCover - covered)) / totalCover);
+};
+
+const roomCoord = (maze: string[]): TCoord => {
+  let res = [-1, -1] as TCoord;
+  for (let i = 0; i < maze.length; i++) {
+    for (let j = 0; j < maze[i].length; j++) {
+      if (maze[i][j] === "C") (res[0] = i), (res[1] = j);
+    }
+  }
+  return res;
+};
+
+let initCover = 0;
+let i = 0;
+
+while (true) {
+  i++;
+  var inputs: string[] = readline().split(" ");
+  const KR: number = parseInt(inputs[0]); // row where Rick is located.
+  const KC: number = parseInt(inputs[1]); // column where Rick is located.
+  let p = [KR, KC] as TCoord;
+
+  const maze = [];
+  for (let i = 0; i < R; i++) {
+    const ROW: string = readline(); // C of the characters in '#.TC?' (i.e. one line of the ASCII maze).
+    maze.push(ROW);
+  }
+  if (i === 1) {
+    iP = [KR, KC] as TCoord;
+    initCover = maze.reduce(
+      (acc, cur) =>
+        acc + cur.split("").reduce((a, c) => a + (c === "?" ? 1 : 0), 0),
+      0
+    );
+  }
+  if (rc[0] === -1 && rc[1] === -1) rc = roomCoord(maze);
+  let ur = uncoveredRate(maze, initCover);
+  console.error(ur);
+  console.error(maze);
+  graph = updateGraph(graph, p, maze, RADAR);
+  if (!visited.includes(`${p[0]},${p[1]}`)) visited.push(`${p[0]},${p[1]}`);
+
+  if (maze[p[0]][p[1]] === "C") {
+    flagReached = true;
+    moveMode = "goHome";
+    console.error("Flag reached!");
+  }
+
+  let next = [-1, -1] as TCoord;
+  if (moveMode === "goExplore") {
+    let path;
+    const unlinked: string[] = [];
+    do {
+      let d = getUnvisited(graph, visited, ur < 100 ? rc : [-1, -1], unlinked);
+
+      path = bfs(graph, `${p[0]},${p[1]}`, `${d[0]},${d[1]}`);
+      unlinked.push(`${d[0]},${d[1]}`);
+    } while (path.path.length === 0);
+
+    next = path.path[1].split(",").map((x) => parseInt(x)) as TCoord;
+  } else if (moveMode === "goHome") {
+    let path = bfs(graph, `${p[0]},${p[1]}`, `${iP[0]},${iP[1]}`);
+    next = path.path[1].split(",").map((x) => parseInt(x)) as TCoord;
+  }
+  let direction = getDirection(p, next);
+  console.log(direction);
+}

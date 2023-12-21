@@ -1,0 +1,10 @@
+{
+  "ts-node": {
+    "files": true
+  },
+  "files": ["mars/index.d.ts"],
+  "compilerOptions": {
+    "lib": ["es6", "es2016", "es2017.string", "dom"],
+    "typeRoots": ["mars/index.d.ts"]
+  }
+}
